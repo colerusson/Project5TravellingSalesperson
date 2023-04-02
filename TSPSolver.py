@@ -16,8 +16,8 @@ import heapq
 
 
 def reduceMatrix(matrix):
-    matrixReduction = np.copy(matrix)
     reductionCost = 0
+    matrixReduction = np.copy(matrix)
 
     for row in matrixReduction:
         minVal = np.min(row)
@@ -63,17 +63,17 @@ class TSPSolver:
     def defaultRandomTour(self, time_allowance=60.0):
         results = {}
         cities = self._scenario.getCities()
-        ncities = len(cities)
+        numCities = len(cities)
         foundTour = False
         count = 0
         bssf = None
         start_time = time.time()
         while not foundTour and time.time() - start_time < time_allowance:
             # create a random permutation
-            perm = np.random.permutation(ncities)
+            perm = np.random.permutation(numCities)
             route = []
             # Now build the route using the random permutation
-            for i in range(ncities):
+            for i in range(numCities):
                 route.append(cities[perm[i]])
             bssf = TSPSolution(route)
             count += 1
@@ -81,6 +81,7 @@ class TSPSolver:
                 # Found a valid route
                 foundTour = True
         end_time = time.time()
+
         results['cost'] = bssf.cost if foundTour else math.inf
         results['time'] = end_time - start_time
         results['count'] = count
@@ -88,6 +89,7 @@ class TSPSolver:
         results['max'] = None
         results['total'] = None
         results['pruned'] = None
+
         return results
 
     ''' <summary>
@@ -103,21 +105,22 @@ class TSPSolver:
     '''
 
     def greedy(self, time_allowance=60.0):
+        results = {}
         cities = self._scenario.getCities()
-
         distances = moveCitiesToArray(cities)
-
         n = distances.shape[0]
         startCity = random.randint(0, n - 1)
         path = [startCity]
         totalDistance = 0
 
-        start_time = time.time()
+        startTime = time.time()
+
         while len(path) < n:
-            if time.time() - start_time > time_allowance:
-                return None
-            currentCity = path[-1]
+            if time.time() - startTime > time_allowance:
+                break
+
             nextCity = None
+            currentCity = path[-1]
             minDistance = np.inf
 
             for city in range(n):
@@ -133,27 +136,27 @@ class TSPSolver:
                 path.append(startCity)
                 continue
 
-            path.append(nextCity)
             totalDistance += minDistance
+            path.append(nextCity)
 
-        end_time = time.time()
+        endTime = time.time()
+
         totalDistance += distances[path[-1], startCity]
-
         route = []
+
         for city in path:
             route.append(cities[city])
         bssf = TSPSolution(route)
 
-        results = {}
         results['cost'] = totalDistance
-        results['time'] = end_time - start_time
+        results['time'] = endTime - startTime
         results['count'] = 1
         results['soln'] = bssf
         results['max'] = None
         results['total'] = None
         results['pruned'] = None
-        return results
 
+        return results
 
     ''' <summary>
         This is the entry point for the branch-and-bound algorithm that you will implement
@@ -165,16 +168,18 @@ class TSPSolver:
     '''
 
     def branchAndBound(self, time_allowance=60.0):
+        results = {}
         cities = self._scenario.getCities()
         numCities = len(cities)
-        bssf = self.greedy()['cost']
-        matrix = moveCitiesToArray(cities)
 
+        bssf = self.greedy()['cost']
+
+        matrix = moveCitiesToArray(cities)
         matrix, reductionValue = reduceMatrix(matrix)
 
         queue = []
 
-        start_node = Node(matrix, reductionValue, 0)
+        start_node = Node(reductionValue, 0, matrix)
         start_node.addToPath(0)
         heapq.heappush(queue, start_node)
 
@@ -184,15 +189,17 @@ class TSPSolver:
         maxStorage = 0
         bestNodeSoFar = None
 
-        start_time = time.time()
+        startTime = time.time()
 
         while queue:
+            if time.time() - startTime > time_allowance:
+                break
+
             parentNode = heapq.heappop(queue)
             parentMatrix = parentNode.matrix
+            currRow = parentMatrix[parentNode.parent]
 
-            row = parentMatrix[parentNode.parent]
-
-            for rowIndex, distanceToCity in enumerate(row):
+            for rowIndex, distanceToCity in enumerate(currRow):
                 if distanceToCity == np.inf:
                     continue
 
@@ -208,7 +215,7 @@ class TSPSolver:
                 reducedMatrix, reductionValue = reduceMatrix(childMatrix)
                 nodesCreated += 1
 
-                childNode = Node(reducedMatrix, parentNode.cost + distanceToCity + reductionValue, rowIndex)
+                childNode = Node(parentNode.cost + distanceToCity + reductionValue, rowIndex, reducedMatrix)
                 childNode.addPathToPath(parentNode.path)
                 childNode.addToPath(rowIndex)
 
@@ -225,13 +232,14 @@ class TSPSolver:
         endTime = time.time()
 
         solutionPath = []
+
         for cityIndex in bestNodeSoFar.path:
             solutionPath.append(cities[cityIndex])
 
         bestSolution = TSPSolution(solutionPath)
-        results = {}
+
         results['cost'] = bssf
-        results['time'] = endTime - start_time
+        results['time'] = endTime - startTime
         results['count'] = numSolution
         results['soln'] = bestSolution
         results['max'] = maxStorage
@@ -253,19 +261,19 @@ class TSPSolver:
         pass
 
 
-def moveCitiesToArray(cities_list):
-    numCities = len(cities_list)
+def moveCitiesToArray(citiesList):
+    numCities = len(citiesList)
     citiesMatrix = np.zeros((numCities, numCities))
 
-    for row in range(numCities):
-        for col in range(numCities):
-            citiesMatrix[row][col] = cities_list[row].costTo(cities_list[col])
+    for i in range(numCities):
+        for j in range(numCities):
+            citiesMatrix[i][j] = citiesList[i].costTo(citiesList[j])
 
     return citiesMatrix
 
 
 class Node:
-    def __init__(self, matrix=None, cost=0, parent=0):
+    def __init__(self, cost=0, parent=0, matrix=None):
         self.matrix = matrix
         self.cost = cost
         self.parent = parent
