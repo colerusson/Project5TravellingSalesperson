@@ -215,7 +215,6 @@ class TSPSolver:
         cities = self._scenario.getCities()
         # get the number of cities
         numCities = len(cities)
-
         # get the greedy solution as the initial BSSF
         bssf = self.greedy()['cost']
         if bssf is None:
@@ -227,7 +226,6 @@ class TSPSolver:
 
         # initialize the queue
         queue = []
-
         # create the start node
         start_node = Node(reductionValue, 0, matrix)
         start_node.addToPath(0)
