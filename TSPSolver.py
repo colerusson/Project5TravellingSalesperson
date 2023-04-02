@@ -144,7 +144,7 @@ class TSPSolver:
         while len(path) < n:
             # if the time allowance is exceeded, break out of the loop
             if time.time() - startTime > time_allowance:
-                break
+                return None
 
             # initialize the next city to None and the minimum distance to infinity
             nextCity = None
@@ -218,6 +218,8 @@ class TSPSolver:
 
         # get the greedy solution as the initial BSSF
         bssf = self.greedy()['cost']
+        if bssf is None:
+            bssf = self.defaultRandomTour()['cost']
 
         # get the matrix of distances and reduce the matrix
         matrix = moveCitiesToArray(cities)
