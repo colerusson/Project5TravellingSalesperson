@@ -100,3 +100,79 @@ def branchAndBound(self, time_allowance=60.0):
     results['total'] = None
     results['pruned'] = None
     return results
+
+
+
+
+
+def branchAndBound(self, time_allowance=60.0):
+        results = {}
+        cities = self._scenario.getCities()
+        n = len(cities)
+        bssf = self.defaultRandomTour()['soln']
+        start_time = time.time()
+        # Initialize the priority queue with the root node
+        priority_queue = [(0, Node(0, [i], 0, self.calculateBound([i], bssf))) for i in range(n)]
+        max_queue_size = 1
+        total_states_created = 1
+        num_pruned_states = 0
+        num_solutions_found = 0
+
+        while priority_queue:
+            # Check if we have run out of time
+            if time.time() - start_time > time_allowance:
+                break
+            # Pop the node with the smallest bound from the priority queue
+            _, node = heapq.heappop(priority_queue)
+            # Generate children nodes
+            for i in range(n):
+                if i not in node.visited:
+                    child_visited = node.visited + [i]
+                    child_cost = node.cost + cities[node.visited[-1]].costTo(cities[i])
+                    if child_cost < bssf.cost:
+                        child_bound = self.calculateBound(child_visited, bssf)
+                        if child_bound < bssf.cost:
+                            # Update bssf if we have found a better solution
+                            if len(child_visited) == n:
+                                bssf = TSPSolution([cities[j] for j in child_visited])
+                                num_solutions_found += 1
+                            else:
+                                # Add the child node to the priority queue
+                                heapq.heappush(priority_queue,
+                                               (child_bound, Node(i, child_visited, child_cost, child_bound)))
+                            total_states_created += 1
+                        else:
+                            num_pruned_states += 1
+                    else:
+                        num_pruned_states += 1
+            # Update the maximum size of the priority queue
+            max_queue_size = max(max_queue_size, len(priority_queue))
+
+        end_time = time.time()
+        results['cost'] = bssf.cost
+        results['time'] = end_time - start_time
+        results['count'] = num_solutions_found
+        results['soln'] = bssf
+        results['max'] = max_queue_size
+        results['total'] = total_states_created
+        results['pruned'] = num_pruned_states
+        return results
+
+ def calculateBound(self, currentPath, bssf):
+        cities = self._scenario.getCities()
+        unvisitedCities = [city for city in cities if city not in currentPath]
+        bound = bssf.cost
+        lastCity = currentPath[-1]
+
+        for city in unvisitedCities:
+            newCost = lastCity.costTo(city)
+            if newCost < np.inf:
+                potentialPath = currentPath + [city]
+                for i in range(len(potentialPath) - 1):
+                    potentialPathCost = TSPSolution(potentialPath[:i + 1]).cost
+                    if potentialPathCost == np.inf:
+                        break
+                else:
+                    potentialBssf = TSPSolution(potentialPath)
+                    bound += newCost + potentialBssf.cost
+        return bound
