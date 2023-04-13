@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from collections import deque
 
 from which_pyqt import PYQT_VER
 
