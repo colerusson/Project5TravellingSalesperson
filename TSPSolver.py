@@ -328,7 +328,41 @@ class TSPSolver:
     '''
 
     def fancy(self, time_allowance=60.0):
-        pass
+        start_time = time.time()
+        cities = self._scenario.getCities()
+        adjacency_matrix = moveCitiesToArray(cities)
+        results = {}
+
+        s = list(range(len(adjacency_matrix)))
+        c = getCost(adjacency_matrix, s)
+        num_trials = 1
+        T = 30
+        alpha = 0.99
+        while num_trials <= 1000 and time.time() - start_time < time_allowance:
+            n = np.random.randint(0, len(adjacency_matrix))
+            while True:
+                m = np.random.randint(0, len(adjacency_matrix))
+                if n != m:
+                    break
+            s1 = swap(s, m, n)
+            c1 = getCost(adjacency_matrix, s1)
+            if c1 < c:
+                s, c = s1, c1
+            else:
+                if np.random.rand() < np.exp(-(c1 - c) / T):
+                    s, c = s1, c1
+            T = alpha * T
+            num_trials += 1
+
+        end_time = time.time()
+        results['cost'] = c
+        results['time'] = end_time - start_time
+        results['count'] = None
+        results['soln'] = None
+        results['max'] = None
+        results['total'] = None
+        results['pruned'] = None
+        return results
 
 
 # helper function to move the cities objects into a matrix
@@ -371,3 +405,21 @@ class Node:
     def addPathToPath(self, path):
         for item in path:
             self.path.append(item)
+
+
+def swap(s, m, n):
+    i, j = min(m, n), max(m, n)
+    s1 = s.copy()
+    while i < j:
+        s1[i], s1[j] = s1[j], s1[i]
+        i += 1
+        j -= 1
+    return s1
+
+
+def getCost(adjacency_matrix, s):
+    cost = 0
+    for i in range(len(s) - 1):
+        cost += adjacency_matrix[s[i]][s[i + 1]]
+    cost += adjacency_matrix[s[len(s) - 1]][s[0]]
+    return cost
